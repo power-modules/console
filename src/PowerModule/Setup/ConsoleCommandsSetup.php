@@ -67,7 +67,16 @@ final class ConsoleCommandsSetup implements PowerModuleSetup
             $this->commandMap,
         );
 
-        $this->console->setCommandLoader($this->commandLoader);
-        $powerModuleSetupDto->rootContainer->set(Application::class, $this->console);
+        $console = $this->console;
+
+        if ($powerModuleSetupDto->rootContainer->has(Application::class) === true) {
+            // Just in case the application is already registered in the root container in some other setup or bootstrap code
+            $console = $powerModuleSetupDto->rootContainer->get(Application::class);
+        } else {
+            // If not, we can register our own instance
+            $powerModuleSetupDto->rootContainer->set(Application::class, $this->console);
+        }
+
+        $console->setCommandLoader($this->commandLoader);
     }
 }

@@ -22,6 +22,7 @@ use Modular\Framework\App\Config\Setting;
 use Modular\Framework\App\ModularAppBuilder;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Application;
+use Modular\Console\Test\PowerModule\Stub\ModuleThatExportsConsoleApplication;
 
 final class ConsoleCommandsSetupTest extends TestCase
 {
@@ -82,5 +83,23 @@ final class ConsoleCommandsSetupTest extends TestCase
         $output = new \Symfony\Component\Console\Output\BufferedOutput();
         $bCommand->run($input, $output);
         self::assertSame('BCommand executed with injected value', trim($output->fetch()));
+    }
+
+    public function testItRespectsAlreadyRegisteredConsoleApplication(): void
+    {
+        $app = new ModularAppBuilder(__DIR__)
+            ->withConfig(Config::forAppRoot(__DIR__)->set(Setting::CachePath, sys_get_temp_dir()))
+            ->withPowerSetup(new ConsoleCommandsSetup())
+            ->withModules(
+                ModuleThatExportsConsoleApplication::class,
+                ModuleWithCommands::class,
+            )
+            ->build()
+        ;
+
+        $console = $app->get(Application::class);
+        self::assertSame('Pre-registered Console App', $console->getName());
+        self::assertTrue($console->has('a-command'));
+        self::assertTrue($console->has('b-command'));
     }
 }
