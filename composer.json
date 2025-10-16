@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "power-modules/console-plugin",
+    "name": "power-modules/console",
     "description": "PowerModuleSetup extension that auto-discovers and registers Symfony Console commands from Power Modules.",
     "type": "library",
     "keywords": [
@@ -8,14 +8,9 @@
         "framework",
         "power-modules",
         "dependency-injection",
-        "encapsulation",
-        "microservices",
-        "modular-architecture",
-        "di-container",
-        "component-based",
-        "plugin-system",
-        "ecosystem",
-        "powermodulesetup"
+        "symfony",
+        "console",
+        "cli"
     ],
     "license": "MIT",
     "authors": [
