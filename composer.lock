@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5893d6ad6bf4cd810f6c6140129646a2",
+    "content-hash": "5b918cae7c86c5ee09de1fddb5897cf1",
     "packages": [
         {
             "name": "power-modules/framework",
