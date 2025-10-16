@@ -1,7 +1,7 @@
 # Console Plugin
 
-[![Packagist Version](https://img.shields.io/packagist/v/power-modules/console-plugin)](https://packagist.org/packages/power-modules/console-plugin)
-[![PHP Version](https://img.shields.io/packagist/php-v/power-modules/console-plugin)](https://packagist.org/packages/power-modules/console-plugin)
+[![Packagist Version](https://img.shields.io/packagist/v/power-modules/console)](https://packagist.org/packages/power-modules/console)
+[![PHP Version](https://img.shields.io/packagist/php-v/power-modules/console)](https://packagist.org/packages/power-modules/console)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%208-blue)](#)
 
@@ -22,7 +22,7 @@ This plugin bridges Symfony Console with the Power Modules Framework's modular a
 ## 📦 Installation
 
 ```bash
-composer require power-modules/console-plugin
+composer require power-modules/console
 ```
 
 ## 🚀 Quick Start
