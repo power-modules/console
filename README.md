@@ -1,31 +1,23 @@
-# Console Plugin
+# Console
 
 [![Packagist Version](https://img.shields.io/packagist/v/power-modules/console)](https://packagist.org/packages/power-modules/console)
 [![PHP Version](https://img.shields.io/packagist/php-v/power-modules/console)](https://packagist.org/packages/power-modules/console)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%208-blue)](#)
 
-A **PowerModuleSetup extension** for the [Power Modules Framework](https://github.com/power-modules/framework) that automatically discovers and registers Symfony Console commands from your modules.
+A **PowerModuleSetup extension** for the [Power Modules Framework](https://github.com/power-modules/framework) that auto-discovers and registers Symfony Console commands from your modules.
 
-## 🎯 Purpose
+## Why a separate interface?
 
-This plugin bridges Symfony Console with the Power Modules Framework's modular architecture. It allows modules to export console commands while maintaining the framework's encapsulation principles. Commands are auto-discovered, lazily loaded from the DI container, and registered into a central `Console\Application`.
+The framework's `ExportsComponents` is for sharing services between modules via `ImportsComponentsSetup` — it belongs to inter-module dependency wiring. Console commands are not services another module imports; they are an outward-facing capability of a module. This package introduces `ProvidesConsoleCommands` to express that cleanly, without conflating command registration with cross-module service sharing.
 
-## ✨ Key Features
-
-- **🔍 Auto-Discovery**: Automatically finds commands exported by modules via `#[AsCommand]` attribute
-- **⚡ Lazy Loading**: Commands are instantiated only when executed via `ContainerCommandLoader`
-- **🔒 Encapsulation**: Each module's commands remain isolated in their module's container scope
-- **💉 DI Integration**: Full dependency injection support for command constructors
-- **📦 Zero Configuration**: Just export your commands from modules - registration is automatic
-
-## 📦 Installation
+## Installation
 
 ```bash
 composer require power-modules/console
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 **1. Create a command in your module:**
 
@@ -52,38 +44,38 @@ final class ProcessOrdersCommand extends Command
     {
         $this->orderService->processPendingOrders();
         $output->writeln('Orders processed successfully!');
-        
+
         return Command::SUCCESS;
     }
 }
 ```
 
-**2. Export the command from your module:**
+**2. Implement `ProvidesConsoleCommands` in your module:**
 
 ```php
 <?php
 
 namespace MyApp\Orders;
 
-use Modular\Framework\PowerModule\Contract\ExportsComponents;
+use Modular\Console\Contract\ProvidesConsoleCommands;
 use Modular\Framework\PowerModule\Contract\PowerModule;
 use Modular\Framework\PowerModule\Contract\ConfigurableContainerInterface;
 
-final class OrderModule implements PowerModule, ExportsComponents
+final class OrderModule implements PowerModule, ProvidesConsoleCommands
 {
-    public static function exports(): array
+    public function getConsoleCommands(): array
     {
         return [
-            ProcessOrdersCommand::class, // Export your command
+            ProcessOrdersCommand::class,
         ];
     }
 
     public function register(ConfigurableContainerInterface $container): void
     {
-        $container->set(OrderService::class, OrderService::class); // Stays private to this module
-        
+        $container->set(OrderService::class, OrderService::class);
+
         $container->set(ProcessOrdersCommand::class, ProcessOrdersCommand::class)
-            ->addArguments([OrderService::class]) // DI just works!
+            ->addArguments([OrderService::class])
         ;
     }
 }
@@ -108,52 +100,55 @@ $app = new ModularAppBuilder(__DIR__)
         \MyApp\Orders\OrderModule::class,
         \MyApp\Users\UserModule::class,
     )
-    ->addPowerModuleSetup(new ConsoleCommandsSetup())
+    ->withPowerSetup(new ConsoleCommandsSetup())
     ->build()
 ;
 
-// Get the configured Console Application
-$console = $app->get(Application::class);
-$console->run();
+$app->get(Application::class)->run();
 ```
 
 **4. Run your commands:**
 
 ```bash
 php bin/console orders:process
-php bin/console list  # See all registered commands
+php bin/console list
 ```
 
-## 🔧 How It Works
+## How It Works
 
-The plugin uses a **two-phase setup process** aligned with the framework's PowerModuleSetup lifecycle:
+`ConsoleCommandsSetup` uses the framework's two-phase setup lifecycle:
 
-1. **PRE Phase**: Scans all modules implementing `ExportsComponents`, discovers classes extending `Command` with `#[AsCommand]` attributes, and builds a command map
-2. **POST Phase**: Creates a `ContainerCommandLoader` with the collected commands and registers the `Console\Application` in the root container
+**PRE phase** — for each module implementing `ProvidesConsoleCommands`, iterates `getConsoleCommands()` and reads the `#[AsCommand]` attribute on each class to build a name → class-string command map.
 
-Commands are **lazily loaded** - they're instantiated from the container only when executed, ensuring efficient memory usage and fast startup.
+**POST phase** — two steps:
 
-## 📋 Requirements
+1. **Application registration** (once, on the first module): creates a `ContainerCommandLoader` from the collected command map and registers a `Console\Application` in the root container. If an `Application` is already present there (e.g. pre-registered by another module), it is reused rather than replaced.
+
+2. **Command bridging** (per `ProvidesConsoleCommands` module): registers each command class in the root container, resolved from the module's own container. This keeps each command's DI wiring private to its module while making the command resolvable by the `ContainerCommandLoader`.
+
+Commands are **lazily instantiated** — the container resolves a command only when it is actually executed.
+
+## Requirements
 
 - **PHP**: ^8.4
 - **power-modules/framework**: ^2.1
 - **symfony/console**: ^7.3
 
-## 🏗️ Architecture
+## Architecture
 
+- Modules declare commands via `ProvidesConsoleCommands::getConsoleCommands()` — no need to also implement `ExportsComponents`
 - Commands must extend `Symfony\Component\Console\Command\Command`
-- Commands must be annotated with `#[AsCommand]` attribute
-- Commands must be in the module's `exports()` array
-- Dependencies are resolved via constructor injection from the module's container
+- Commands must carry the `#[AsCommand]` attribute (provides the command name)
+- Dependencies are resolved from the module's own container via constructor injection
 - The `Console\Application` instance is registered in the root container for retrieval
 
-## 🤝 Contributing
+## Contributing
 
-Contributions are welcome! This project follows the same standards as the Power Modules Framework:
+Contributions are welcome. This project follows the same standards as the Power Modules Framework:
 
-- **PHPStan Level 8** - Very strict static analysis
-- **PHP CS Fixer** - Code style consistency
-- **PHPUnit** - Comprehensive test coverage
+- **PHPStan Level 8**
+- **PHP CS Fixer**
+- **PHPUnit**
 
 ```bash
 make test       # Run tests
@@ -161,10 +156,11 @@ make phpstan    # Static analysis
 make codestyle  # Code style check
 ```
 
-## 📄 License
+## License
 
 MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-**Part of the [Power Modules Framework](https://github.com/power-modules/framework) ecosystem** - Building truly modular PHP applications with runtime-enforced encapsulation.
+**Part of the [Power Modules Framework](https://github.com/power-modules/framework) ecosystem.**
+

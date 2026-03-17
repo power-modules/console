@@ -15,6 +15,7 @@ namespace Modular\Console\Test\PowerModule;
 
 use Modular\Console\PowerModule\Setup\ConsoleCommandsSetup;
 use Modular\Console\Test\PowerModule\Stub\ModuleWithCommands;
+use Modular\Console\Test\PowerModule\Stub\ModuleWithCommandsOnly;
 use Modular\Console\Test\PowerModule\Stub\ModuleWithoutCommands;
 use Modular\Console\Test\PowerModule\Stub\NotACommand;
 use Modular\Framework\App\Config\Config;
@@ -38,7 +39,7 @@ final class ConsoleCommandsSetupTest extends TestCase
         self::assertInstanceOf(Application::class, $app->get(Application::class));
     }
 
-    public function testConsoleApplicationDoesNotHaveCommandsWhenModuleExportsNoCommands(): void
+    public function testConsoleApplicationDoesNotHaveCommandsWhenModuleDoesNotProvideCommands(): void
     {
         $app = new ModularAppBuilder(__DIR__)
             ->withConfig(Config::forAppRoot(__DIR__)->set(Setting::CachePath, sys_get_temp_dir()))
@@ -101,5 +102,27 @@ final class ConsoleCommandsSetupTest extends TestCase
         self::assertSame('Pre-registered Console App', $console->getName());
         self::assertTrue($console->has('a-command'));
         self::assertTrue($console->has('b-command'));
+    }
+
+    public function testCommandsAreDiscoverableWithoutExportsComponents(): void
+    {
+        $app = new ModularAppBuilder(__DIR__)
+            ->withConfig(Config::forAppRoot(__DIR__)->set(Setting::CachePath, sys_get_temp_dir()))
+            ->withPowerSetup(new ConsoleCommandsSetup())
+            ->withModules(
+                ModuleWithCommandsOnly::class,
+            )
+            ->build()
+        ;
+
+        $console = $app->get(Application::class);
+
+        self::assertTrue($console->has('a-command'));
+
+        $command = $console->get('a-command');
+        $input = new \Symfony\Component\Console\Input\ArrayInput([]);
+        $output = new \Symfony\Component\Console\Output\BufferedOutput();
+        $command->run($input, $output);
+        self::assertSame('ACommand executed', trim($output->fetch()));
     }
 }

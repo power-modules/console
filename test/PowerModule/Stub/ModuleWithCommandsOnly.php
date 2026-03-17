@@ -17,23 +17,17 @@ use Modular\Console\Contract\ProvidesConsoleCommands;
 use Modular\Framework\Container\ConfigurableContainerInterface;
 use Modular\Framework\PowerModule\Contract\PowerModule;
 
-final class ModuleWithCommands implements PowerModule, ProvidesConsoleCommands
+final class ModuleWithCommandsOnly implements PowerModule, ProvidesConsoleCommands
 {
     public function getConsoleCommands(): array
     {
         return [
             ACommand::class,
-            BCommand::class,
         ];
     }
 
     public function register(ConfigurableContainerInterface $container): void
     {
         $container->set(ACommand::class, ACommand::class);
-        $container->set(BCommand::class, BCommand::class)
-            ->addArguments([
-                'injected value',
-            ])
-        ;
     }
 }
